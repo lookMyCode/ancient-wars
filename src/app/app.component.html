@@ -1,0 +1,11 @@
+<div class="battlefield_wrap">
+  <canvas 
+    [width]="DPI_WIDTH" 
+    [height]="DPI_HEIGHT" 
+    class="battlefield"
+    (mousemove)="mousemove($event)"
+    (mouseout)="mouseout($event)"
+    #battlefieldCanvas
+  ></canvas>
+</div>
+
