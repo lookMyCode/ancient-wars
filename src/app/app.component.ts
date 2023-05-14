@@ -79,8 +79,8 @@ export class AppComponent implements AfterViewInit {
           fighters: [
             {
               position: {
-                x: 1,
-                y: 1,
+                x: 0,
+                y: 0,
               },
               fighter: new RomanHorsemanModel(),
             }
@@ -119,6 +119,7 @@ export class AppComponent implements AfterViewInit {
     const {offsetX, offsetY} = e;
     const offsetXDpi = offsetX * this.dpiInPxX;
     const offsetYDpi = offsetY * this.dpiInPxY;
+    let cell: ICell | undefined;
 
     for (let i = 0, l = this.cells.length; i < l; i++) {
       const c = this.cells[i];
@@ -126,15 +127,47 @@ export class AppComponent implements AfterViewInit {
       const inY = c.top <= offsetYDpi && (c.top + c.height) > offsetYDpi;
 
       c.mouseOver = inX && inY;
+      if (inX && inY) cell = c;
     }
 
-    this.proxy.mouse = {
-      x: Math.round(offsetX * this.dpiInPxX),
-      y: Math.round(offsetY * this.dpiInPxY),
+    if (cell) {
+      const isAnotherCell = this.proxy.mousePosition?.x !== cell.position.x || this.proxy.mousePosition?.y !== cell.position.y;
+
+      const sectionXSize = Math.ceil(cell.height / 3);
+      const sectionYSize = Math.ceil(cell.width / 3);
+
+      const sectionX = (offsetXDpi - cell.left) <= sectionXSize
+        ? -1
+        : (cell.left + cell.width - offsetXDpi) <= sectionXSize 
+          ? 1
+          : 0;
+      const sectionY = (offsetYDpi - cell.top) <= sectionYSize
+        ? -1
+        : (cell.top + cell.height - offsetYDpi) <= sectionYSize 
+          ? 1
+          : 0;
+          
+      const isAnotherSection = this.proxy.mousePosition?.section?.x !== sectionX || this.proxy.mousePosition?.section?.y !== sectionY;
+
+      if (isAnotherCell || isAnotherSection) {
+        this.proxy.mousePosition = {
+          x: cell.position.x,
+          y: cell.position.y,
+          section: {
+            x: sectionX,
+            y: sectionY,
+          }
+        }
+      }
     }
   }
 
-  mouseout = (e: MouseEvent) => {}
+  mouseout = (e: MouseEvent) => {
+    this.proxy.mousePosition = undefined;
+    for (let i = 0, l = this.cells.length; i < l; i++) {
+      this.cells[i].mouseOver = false;
+    }
+  }
 
   private init() {
     const that: AppComponent = this;
@@ -277,94 +310,171 @@ export class AppComponent implements AfterViewInit {
   }
 
   private computeAvailableCells(fighter: IFighterItem) {
+    type Direction = -1 | 0 | 1;
     const distantSpeedCost = Math.sqrt(2);
-    const availableCoordinates: ICoordinate[] = [];
-    const compute = (currentPos: ICoordinate, availableSpeed: number) => {
-      if (availableCoordinates.findIndex(c => c.x === currentPos.x && c.y === currentPos.y) >= 0) return;
-      if (availableSpeed < 1) return;
-      availableCoordinates.push(currentPos);
-
-      const neighboringX: number[] = [];
-      const neighboringY: number[] = [];
-      const nearestNeighboringСells: ICoordinate[] = [];
-      const distantNeighboringСells: ICoordinate[] = [];
-
-      for (let i = -1; i <= 1; i++) {
-        const x = currentPos.x + i;
-        const y = currentPos.y + i;
-
-        if (x >= 0 && x < this.X_SIZE) {
-          neighboringX.push(x);
+    const availableCoordinates: (ICoordinate & {availableSpeed: number})[] = [];
+    const busyPositions: ICoordinate[] = [];
+    
+    for (let k = 0, l1 = this.teams.length; k < l1; k++) {
+      for (let n = 0, l2 = this.teams[k].armies.length; n < l2; n++) {
+        for (let m = 0, l3 = this.teams[k].armies[n].fighters.length; m < l3; m++) {
+          busyPositions.push(this.teams[k].armies[n].fighters[m].position);
         }
-
-        if (y >= 0 && y < this.Y_SIZE) {
-          neighboringY.push(y);
-        }
-      }
-
-      for (let i = 0, lx = neighboringX.length; i < lx; i++) {
-
-        for (let j = 0, ly = neighboringY.length; j < ly; j++) {
-          let isBusy = false;
-
-          for (let k = 0, l1 = this.teams.length; k < l1; k++) {
-            for (let n = 0, l2 = this.teams[k].armies.length; n < l2; n++) {
-              for (let m = 0, l3 = this.teams[k].armies[n].fighters.length; m < l3; m++) {
-                const f = this.teams[k].armies[n].fighters[m];
-                if (f.position.x === neighboringX[i] && f.position.y === neighboringY[j]) {
-                  isBusy = true;
-                }
-
-                if (isBusy) {
-                  continue;
-                }
-              }
-
-              if (isBusy) {
-                continue;
-              }
-            }
-
-            if (isBusy) {
-              continue;
-            }
-          }
-
-          if (isBusy) {
-            continue;
-          }
-
-          const isNearest = neighboringX[i] === currentPos.x || neighboringY[j] === currentPos.y;
-          if (isNearest) {
-            nearestNeighboringСells.push({
-              x: neighboringX[i],
-              y: neighboringY[j],
-            });
-
-            continue;
-          }
-
-          
-          if (availableSpeed >= distantSpeedCost) {
-            distantNeighboringСells.push({
-              x: neighboringX[i],
-              y: neighboringY[j],
-            });
-          }
-        }
-      }
-
-      for (let i = 0, l = nearestNeighboringСells.length; i < l; i++) {
-        compute(nearestNeighboringСells[i], availableSpeed - 1);
-      }
-
-      for (let i = 0, l = distantNeighboringСells.length; i < l; i++) {
-        compute(distantNeighboringСells[i], availableSpeed - distantSpeedCost);
       }
     }
     
-    compute(fighter.position, fighter.fighter.speed);
+    const compute = (currentPos: ICoordinate, availableSpeed: number, direction?: {x: Direction, y: Direction}) => {
+      if (currentPos.x < 0 && currentPos.x >= this.X_SIZE) return;
+      if (currentPos.y < 0 && currentPos.y >= this.Y_SIZE) return;
+      if (availableSpeed < 1) return;
 
+      for (let i = 0, l = busyPositions.length; i < l; i++) {
+        if (direction && busyPositions[i].x === currentPos.x && busyPositions[i].y === currentPos.y) return;
+      }
+
+      const availableCoordinate = availableCoordinates.find(c => c.x === currentPos.x && c.y === currentPos.y);
+      if (!availableCoordinate) {
+        availableCoordinates.push({
+          ...currentPos,
+          availableSpeed,
+        });
+      } else {
+        if (availableCoordinate.availableSpeed >= availableSpeed) return;
+        availableCoordinate.availableSpeed = availableSpeed;
+      }
+
+      if (!direction) {
+        for (let i = -1; i < 2; i++) {
+          for (let j = -1; j < 2; j++) {
+            const isNearest = i === 0 || j === 0;
+            const aSp = availableSpeed - (isNearest ? 1 : distantSpeedCost);
+            if (aSp < 1) continue;
+            !(i === 0 && j === 0) && compute(
+              {x: currentPos.x + i, y: currentPos.y + j}, 
+              aSp,
+              {x: i, y: j} as any,
+            );
+          }
+        }
+
+        return;
+      }
+
+      const computeTopLeftDirection = () => {
+        compute(
+          {x: currentPos.x - 1, y: currentPos.y - 1}, 
+          availableSpeed - distantSpeedCost,
+          {x: -1, y: -1},
+        );
+      }
+
+      const computeTopDirection = () => {
+        compute(
+          {x: currentPos.x, y: currentPos.y - 1}, 
+          availableSpeed - 1,
+          {x: 0, y: -1},
+        );
+      }
+
+      const computeTopRightDirection = () => {
+        compute(
+          {x: currentPos.x + 1, y: currentPos.y - 1}, 
+          availableSpeed - distantSpeedCost,
+          {x: 1, y: -1},
+        );
+      }
+
+      const computeRightDirection = () => {
+        compute(
+          {x: currentPos.x + 1, y: currentPos.y}, 
+          availableSpeed - 1,
+          {x: 1, y: 0},
+        );
+      }
+
+      const computeBottomRightDirection = () => {
+        compute(
+          {x: currentPos.x + 1, y: currentPos.y + 1}, 
+          availableSpeed - distantSpeedCost,
+          {x: 1, y: 1},
+        );
+      }
+
+      const computeBottomDirection = () => {
+        compute(
+          {x: currentPos.x, y: currentPos.y + 1}, 
+          availableSpeed - 1,
+          {x: 0, y: 1},
+        );
+      }
+
+      const computeBottomLeftDirection = () => {
+        compute(
+          {x: currentPos.x - 1, y: currentPos.y + 1}, 
+          availableSpeed - distantSpeedCost,
+          {x: -1, y: 1},
+        );
+      }
+
+      const computeLeftDirection = () => {
+        compute(
+          {x: currentPos.x - 1, y: currentPos.y}, 
+          availableSpeed - 1,
+          {x: -1, y: 0},
+        );
+      }
+
+      if (direction.x === 0 && direction.y === -1) {
+        computeTopLeftDirection();
+        computeTopDirection();
+        computeTopRightDirection();
+      }
+
+      if (direction.x === 1 && direction.y === -1) {
+        computeTopDirection();
+        computeTopRightDirection();
+        computeRightDirection();
+      }
+
+      if (direction.x === 1 && direction.y === 0) {
+        computeTopRightDirection();
+        computeRightDirection();
+        computeBottomRightDirection();
+      }
+
+      if (direction.x === 1 && direction.y === 1) {
+        computeRightDirection();
+        computeBottomRightDirection();
+        computeBottomDirection();
+      }
+
+      if (direction.x === 0 && direction.y === 1) {
+        computeBottomRightDirection();
+        computeBottomDirection();
+        computeBottomLeftDirection();
+      }
+
+      if (direction.x === -1 && direction.y === 1) {
+        computeBottomDirection();
+        computeBottomLeftDirection();
+        computeLeftDirection();
+      }
+
+      if (direction.x === -1 && direction.y === 0) {
+        computeBottomLeftDirection();
+        computeLeftDirection();
+        computeTopLeftDirection();
+      }
+
+      if (direction.x === -1 && direction.y === -1) {
+        computeLeftDirection();
+        computeTopLeftDirection();
+        computeTopDirection();
+      }
+    }
+    
+    compute(fighter.position, fighter.fighter.speed + 1);
+    
     for (let i = 0, l = availableCoordinates.length; i < l; i++) {
       const cell = this.cells.find(c => c.position.x === availableCoordinates[i].x && c.position.y === availableCoordinates[i].y);
       if (!cell) continue;

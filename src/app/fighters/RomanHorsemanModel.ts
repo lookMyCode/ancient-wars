@@ -18,7 +18,7 @@ export class RomanHorsemanModel extends HorsemanModel {
       maxMorale: 90,
       onslaught: 10,
       image: 'http://localhost:4200/assets/images/RomanHorseman.png',
-      speed: 10,
+      speed: 14,
     });
 
     this.isShooter = false;
