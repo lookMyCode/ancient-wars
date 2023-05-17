@@ -730,5 +730,6 @@ export class AppComponent implements AfterViewInit {
     }
 
     this.orderOfFighters = [...orderOfFighters];
+    this.cdr.detectChanges();
   }
 }

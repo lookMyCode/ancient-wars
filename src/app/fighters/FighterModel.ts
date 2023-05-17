@@ -164,6 +164,10 @@ export abstract class FighterModel {
     return this._currentInitiative;
   }
 
+  get armyColor() {
+    return this._armyColor;
+  }
+
   set teamId(id: string) {
     this._teamId = id;
   }

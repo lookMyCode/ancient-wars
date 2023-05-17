@@ -1,13 +1,41 @@
-<div class="battlefield_wrap">
-  <canvas 
-    [width]="DPI_WIDTH" 
-    [height]="DPI_HEIGHT" 
-    class="battlefield"
-    (mousemove)="mousemove($event)"
-    (mouseout)="mouseout($event)"
-    #battlefieldCanvas
-  ></canvas>
+<div class="container-fluid">
+  <div class="row">
+    <div class="col-12">
+      <canvas 
+          [width]="DPI_WIDTH" 
+          [height]="DPI_HEIGHT" 
+          class="battlefield"
+          (mousemove)="mousemove($event)"
+          (mouseout)="mouseout($event)"
+          #battlefieldCanvas
+        ></canvas>
+    </div>
+  </div>
+
+  <div class="row">
+
+    <div class="col-10 d-flex flex-wrap">
+      <div 
+        *ngFor="let f of (orderOfFighters | arrLimit : 10)" 
+        class="w-10 fighter"
+        style="border: 2px solid"
+        [style.background-color]="f.armyColor | rgbToColor : 0.3"
+        [style.border-color]="f.armyColor | rgbToColor"
+      >
+        <img *ngIf="f.img" [src]="f.img.src" alt="" class="w-100">
+        <span 
+          class="badge fighter_quantity"
+          [style.background-color]="f.armyColor | rgbToColor"
+        >{{f.quantity}}</span>
+      </div>
+    </div>
+
+    <div class="col-2 d-flex justify-content-center align-items-center">
+      <button class="btn btn-info">Wait</button>
+    </div>
+    
+  </div>
 </div>
 
-<img *ngFor="let f of orderOfFighters" [src]="f.img.src" alt="">
+<!-- <img *ngFor="let f of orderOfFighters" [src]="f.img.src" alt=""> -->
 

@@ -7,7 +7,24 @@
 }
 
 .battlefield {
-  width: 95%;
-  height: 95%;
+  width: 100%;
+  height: calc(100vh - 100px);
+  min-height: 500px;
   border: 0;
+}
+
+.fighter {
+  position: relative;
+  opacity: .7;
+  transition: .2s;
+
+  &:hover {
+    opacity: 1;
+  }
+
+  .fighter_quantity {
+    position: absolute;
+    bottom: 0;
+    right: 0;
+  }
 }
