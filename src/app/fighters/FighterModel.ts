@@ -98,7 +98,7 @@ export abstract class FighterModel {
     this._speed = data.speed;
     this._quantity = data.quantity;
     this._initiative = data.initiative;
-    this._currentInitiative = 0 //data.initiative + (Utils.getRandomInt(-100, 100) / 100);
+    this._currentInitiative = Utils.getRandomInt(-100, 100) / 100;
     this.currentMorale = data.currentMorale;
     this.maxMorale = data.maxMorale;
     this._image = data.image;

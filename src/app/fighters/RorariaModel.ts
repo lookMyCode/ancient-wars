@@ -13,7 +13,7 @@ export class RorariaModel extends SpearmenModel {
         max: 15,
       },
       healthPoints: 35,
-      initiative: 10,
+      initiative: 5,
       currentMorale: 45,
       maxMorale: 75,
       onslaught: 4,

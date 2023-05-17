@@ -612,9 +612,9 @@ export class AppComponent implements AfterViewInit {
     }
   }
 
-  private computeOrder(iterations = 1) {
-    type T = {id: string, initiative: number, currentInitiative: number};
-    const fighters: FighterModel[] = [];
+  private computeOrder(iterations = 4) {
+    type T = {id: string, initiative: number, currentInitiative: number, name: string};
+    const fighters: FighterModel[] = []; 
     let startStacks: T[] = [];
 
     for (let i = 0, l1 = this.teams.length; i < l1; i++) {
@@ -625,30 +625,31 @@ export class AppComponent implements AfterViewInit {
           startStacks.push({
             id: f.id,
             initiative: f.initiative,
-            currentInitiative: f.currentInitiative - f.initiative,
+            currentInitiative: f.currentInitiative,
+            name: f.constructor.name,
           });
         }
       }
     }
-
+    
     const makeIteration = (stacks: T[], iterations: number): T[] => {
       stacks = Utils.copy(stacks);
-
+      
       for (let i = 0, l = stacks.length; i < l; i++) {
         stacks[i].currentInitiative += stacks[i].initiative;
       }
-
+      
       stacks.sort((a, b) => {
         if (a.currentInitiative > b.currentInitiative) return -1;
         if (a.currentInitiative < b.currentInitiative) return 1;
         return 0;
       });
-
+      
       let nextStacks: T[] = [];
 
       for (let i = 0, l = stacks.length; i < l; i++) {
         stacks[i].currentInitiative = stacks[i].currentInitiative - 10;
-        if (stacks[i].currentInitiative > 10) {
+        if (stacks[i].currentInitiative >= 10) {
           nextStacks.push(Utils.copy(stacks[i]));
         }
       }
@@ -665,7 +666,7 @@ export class AppComponent implements AfterViewInit {
 
         for (let i = 0, l = s.length; i < l; i++) {
           s[i].currentInitiative = s[i].currentInitiative - 10;
-          if (s[i].currentInitiative > 10) {
+          if (s[i].currentInitiative >= 10) {
             nextStacks.push(Utils.copy(s[i]));
           }
         }
