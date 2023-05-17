@@ -10,9 +10,10 @@ export class CanvasUtils {
     ctx.closePath();
   } 
   
-  static strokeArea(ctx: CanvasRenderingContext2D, area: IArea & {strokeStyle: string}) {
+  static strokeArea(ctx: CanvasRenderingContext2D, area: IArea & {strokeStyle: string, lineWidth?: number}) {
     ctx.beginPath();
     ctx.strokeStyle = area.strokeStyle;
+    ctx.lineWidth = area.lineWidth || 1;
     ctx.strokeRect(area.xMin, area.yMin, area.xMax - area.xMin, area.yMax - area.yMin);
     ctx.stroke();
     ctx.closePath();

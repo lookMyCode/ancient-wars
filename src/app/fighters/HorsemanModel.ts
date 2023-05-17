@@ -5,9 +5,12 @@ import { FighterModel } from "./FighterModel";
 export abstract class HorsemanModel extends FighterModel {
 
   constructor(data: any) {
-    super(data);
+    super({
+      ...data,
+      quantity: HORSEMAN_QTY,
+    });
+    
     this.isHorseman = true;
     this.isInfantryman = false;
-    this.quantity = HORSEMAN_QTY;
   }
 }

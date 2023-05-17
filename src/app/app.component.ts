@@ -2,16 +2,16 @@ import { AfterViewInit, ChangeDetectorRef, Component, ElementRef, HostListener, 
 import { DomSanitizer } from '@angular/platform-browser';
 import { CanvasUtils } from './utils/CanvasUtils';
 import {BATTLEFIELD_CANVAS_FILL_COLOR, CELL_STROKE_COLOR} from './models/constants/colors';
-import { v4 as uuidv4 } from 'uuid';
 import { FighterModel } from './fighters/FighterModel';
 import { HorsemanModel } from './fighters/HorsemanModel';
 import { RomanHorsemanModel } from './fighters/RomanHorsemanModel';
+import { ICoordinate } from './models/interfaces/Coordinate';
+import { Team } from './team/Team';
+import { Army } from './army/Army';
+import { RomanSlingersModel } from './fighters/RomanSlingersModel';
+import { RorariaModel } from './fighters/RorariaModel';
+import { Utils } from './utils/Utils';
 
-
-interface ICoordinate {
-  x: number,
-  y: number,
-}
 
 interface ICell {
   top: number,
@@ -23,21 +23,6 @@ interface ICell {
   mouseOver?: boolean,
   availableForGoing?: boolean,
   position: ICoordinate,
-}
-
-interface IFighterItem {
-  position: ICoordinate,
-  fighter: FighterModel
-}
-
-interface IArmy {
-  id: string,
-  fighters: IFighterItem[]
-}
-
-interface ITeam {
-  id: string,
-  armies: IArmy[]
 }
 
 
@@ -70,25 +55,114 @@ export class AppComponent implements AfterViewInit {
 
   private cells: ICell[] = [];
 
-  teams: ITeam[] = [
-    {
-      id: uuidv4(),
+  teams: Team[] = [
+    new Team({
       armies: [
-        {
-          id: uuidv4(),
+        new Army({
+          color: [255, 0, 0],
           fighters: [
-            {
+            new RomanHorsemanModel({
               position: {
-                x: 0,
-                y: 0,
+                x: 3,
+                y: 3,
               },
-              fighter: new RomanHorsemanModel(),
-            }
+            }),
+            new RomanSlingersModel({
+              position: {
+                x: 3,
+                y: 5,
+              },
+            }),
+            new RorariaModel({
+              position: {
+                x: 3,
+                y: 7,
+              },
+            }),
           ],
-        },
+        }),
+        // new Army({
+        //   color: [255, 0, 255],
+        //   fighters: [
+        //     new RomanHorsemanModel({
+        //       position: {
+        //         x: 5,
+        //         y: 3,
+        //       }
+        //     }),
+        //   ],
+        // }),
+        // new Army({
+        //   color: [228, 161, 27],
+        //   fighters: [
+        //     new RomanHorsemanModel({
+        //       position: {
+        //         x: 5,
+        //         y: 4,
+        //       }
+        //     }),
+        //   ],
+        // }),
       ],
-    },
+    }),
+    new Team({
+      armies: [
+        new Army({
+          color: [0, 0, 255],
+          fighters: [
+            new RomanHorsemanModel({
+              position: {
+                x: 12,
+                y: 3,
+              },
+              isReverse: true,
+            }),
+            new RomanSlingersModel({
+              position: {
+                x: 12,
+                y: 5,
+              },
+              isReverse: true,
+            }),
+            new RorariaModel({
+              position: {
+                x: 12,
+                y: 7,
+              },
+              isReverse: true,
+            }),
+          ],
+        }),
+        // new Army({
+        //   color: [20, 180, 64],
+        //   fighters: [
+        //     new RomanHorsemanModel({
+        //       position: {
+        //         x: 10,
+        //         y: 3,
+        //       },
+        //       isReverse: true,
+        //     }),
+        //   ],
+        // }),
+        // new Army({
+        //   color: [87, 43, 130],
+        //   fighters: [
+        //     new RomanHorsemanModel({
+        //       position: {
+        //         x: 10,
+        //         y: 5,
+        //       },
+        //       isReverse: true,
+        //     }),
+        //   ],
+        // }),
+      ],
+      isReverse: true
+    }),
   ];
+
+  orderOfFighters: FighterModel[] = []
 
   constructor(
     private cdr: ChangeDetectorRef,
@@ -98,6 +172,7 @@ export class AppComponent implements AfterViewInit {
   ngAfterViewInit(): void {
     this.init();
     this.renderTeams();
+    this.computeOrder();
   }
 
   @HostListener('window:load', [])
@@ -157,6 +232,35 @@ export class AppComponent implements AfterViewInit {
             x: sectionX,
             y: sectionY,
           }
+        }
+      }
+
+      if (isAnotherCell) {
+        let fighter: FighterModel | undefined;
+        for (let i = 0, l1 = this.teams.length; i < l1; i++) {
+          for (let j = 0, l2 = this.teams[i].armies.length; j < l2; j++) {
+            for (let k = 0, l3 = this.teams[i].armies[j].fighters.length; k < l3; k++) {
+              const f = this.teams[i].armies[j].fighters[k];
+              if (f.position && f.position.x === cell.position.x && f.position.y === cell.position.y) {
+                fighter = f;
+                break;
+              }
+            }
+
+            if (fighter) {
+              break;
+            }
+          }
+
+          if (fighter) {
+            break;
+          }
+        }
+
+        if (fighter) {
+          this.computeAvailableCells(fighter);
+        } else {
+          this.cells.forEach(c => c.availableForGoing = false);
         }
       }
     }
@@ -289,27 +393,52 @@ export class AppComponent implements AfterViewInit {
       for (let j = 0, l2 = this.teams[i].armies.length; j < l2; j++) {
         for (let k = 0, l3 = this.teams[i].armies[j].fighters.length; k < l3; k++) {
           const fighter = this.teams[i].armies[j].fighters[k];
-          if (!fighter.fighter.isImgLoaded) {
+          if (!fighter.isImgLoaded) {
             window.setTimeout(this.renderTeams.bind(this), 20);
             return;
           }
 
-          const img = fighter.fighter.img;
-          const cell = this.cells.find(c => c.position.x === fighter.position.x && c.position.y === fighter.position.y);
+          const img = fighter.img;
+          const cell = this.cells.find(c => c.position.x === fighter.position!.x && c.position.y === fighter.position!.y);
           if (!cell) throw new Error('Cell not found');
+          
+          const colorRGB = this.teams[i].armies[j].color.join(',');
+          const op = 0.5;
+
+          CanvasUtils.strokeArea(this.ctx, {
+            xMin: cell.left + 1,
+            xMax: cell.left + cell.width - 1,
+            yMin: cell.top + 1,
+            yMax: cell.top + cell.height - 1,
+            strokeStyle: `rgba(${colorRGB}, ${op})`,
+            lineWidth: 3,
+          });
 
           const size = Math.min(cell.width, cell.height);
           const xPrefix = (cell.width - size) / 2;
           const yPrefix = (cell.height - size) / 2;
 
           this.ctx.drawImage(img, cell.left + xPrefix, cell.top + yPrefix, size, size);
-          this.computeAvailableCells(fighter);
+          CanvasUtils.fillArea(this.ctx, {
+            xMin: cell.left + cell.width / 2,
+            xMax: cell.left + cell.width,
+            yMin: cell.top + cell.height * 0.75,
+            yMax: cell.top + cell.height,
+            fillStyle: `rgba(${colorRGB}, 1)`
+          });
+          this.ctx.beginPath();
+          this.ctx.font = "18px Comic Sans MS";
+          this.ctx.fillStyle = '#fff';
+          this.ctx.textAlign = 'center';
+          this.ctx.fillText(fighter.quantity.toString(), cell.left + cell.width * 0.75, cell.top + cell.height * 0.95);
+          this.ctx.closePath();
+          // this.computeAvailableCells(fighter);
         }
       }
     }
   }
 
-  private computeAvailableCells(fighter: IFighterItem) {
+  private computeAvailableCells(fighter: FighterModel) {
     type Direction = -1 | 0 | 1;
     const distantSpeedCost = Math.sqrt(2);
     const availableCoordinates: (ICoordinate & {availableSpeed: number})[] = [];
@@ -318,7 +447,7 @@ export class AppComponent implements AfterViewInit {
     for (let k = 0, l1 = this.teams.length; k < l1; k++) {
       for (let n = 0, l2 = this.teams[k].armies.length; n < l2; n++) {
         for (let m = 0, l3 = this.teams[k].armies[n].fighters.length; m < l3; m++) {
-          busyPositions.push(this.teams[k].armies[n].fighters[m].position);
+          busyPositions.push(this.teams[k].armies[n].fighters[m].position!);
         }
       }
     }
@@ -473,7 +602,7 @@ export class AppComponent implements AfterViewInit {
       }
     }
     
-    compute(fighter.position, fighter.fighter.speed + 1);
+    compute(fighter.position!, fighter.speed + 1);
     
     for (let i = 0, l = availableCoordinates.length; i < l; i++) {
       const cell = this.cells.find(c => c.position.x === availableCoordinates[i].x && c.position.y === availableCoordinates[i].y);
@@ -481,5 +610,115 @@ export class AppComponent implements AfterViewInit {
 
       cell.availableForGoing = true;
     }
+  }
+
+  private computeOrder(iterations = 1) {
+    type T = {id: string, initiative: number, currentInitiative: number};
+    const fighters: FighterModel[] = [];
+    let startStacks: T[] = [];
+
+    for (let i = 0, l1 = this.teams.length; i < l1; i++) {
+      for (let j = 0, l2 = this.teams[i].armies.length; j < l2; j++) {
+        for (let k = 0, l3 = this.teams[i].armies[j].fighters.length; k < l3; k++) {
+          const f = this.teams[i].armies[j].fighters[k];
+          fighters.push(f);
+          startStacks.push({
+            id: f.id,
+            initiative: f.initiative,
+            currentInitiative: f.currentInitiative - f.initiative,
+          });
+        }
+      }
+    }
+
+    const makeIteration = (stacks: T[], iterations: number): T[] => {
+      stacks = Utils.copy(stacks);
+
+      for (let i = 0, l = stacks.length; i < l; i++) {
+        stacks[i].currentInitiative += stacks[i].initiative;
+      }
+
+      stacks.sort((a, b) => {
+        if (a.currentInitiative > b.currentInitiative) return -1;
+        if (a.currentInitiative < b.currentInitiative) return 1;
+        return 0;
+      });
+
+      let nextStacks: T[] = [];
+
+      for (let i = 0, l = stacks.length; i < l; i++) {
+        stacks[i].currentInitiative = stacks[i].currentInitiative - 10;
+        if (stacks[i].currentInitiative > 10) {
+          nextStacks.push(Utils.copy(stacks[i]));
+        }
+      }
+
+      while (nextStacks.length > 0) {
+        const s = Utils.copy(nextStacks);
+        nextStacks = [];
+
+        s.sort((a, b) => {
+          if (a.currentInitiative > b.currentInitiative) return -1;
+          if (a.currentInitiative < b.currentInitiative) return 1;
+          return 0;
+        });
+
+        for (let i = 0, l = s.length; i < l; i++) {
+          s[i].currentInitiative = s[i].currentInitiative - 10;
+          if (s[i].currentInitiative > 10) {
+            nextStacks.push(Utils.copy(s[i]));
+          }
+        }
+
+        stacks = [
+          ...stacks,
+          ...s,
+        ];
+      }
+
+      if (iterations <= 1) return stacks;
+
+      for (let i = stacks.length - 1; i >= 0; i--) {
+        let found = false;
+        const stack = stacks[i];
+
+        for (let j = 0, l = nextStacks.length; j < l; j++) {
+          if (stack.id === nextStacks[j].id) {
+            found = true;
+            break;
+          }
+        }
+
+        if (!found) {
+          nextStacks.push(Utils.copy(stack));
+        }
+      }
+
+      const result = makeIteration(nextStacks, iterations - 1);
+      return [
+        ...stacks,
+        ...result,
+      ];
+    }
+
+    const allStacks = makeIteration(startStacks, iterations);
+    const orderOfFighters: FighterModel[] = [];
+
+    for (let i = 0, l1 = allStacks.length; i < l1; i++) {
+      let fighter: FighterModel | undefined;
+
+      for (let j = 0, l2 = fighters.length; j < l2; j++) {
+        const f = fighters[j];
+
+        if (allStacks[i].id === f.id) {
+          fighter = f;
+        }
+      }
+
+      if (!fighter) throw new Error('Fighter not found');
+      orderOfFighters.push(fighter);
+    }
+
+    this.orderOfFighters = [...orderOfFighters];
   }
 }
