@@ -612,7 +612,7 @@ export class AppComponent implements AfterViewInit {
     }
   }
 
-  private computeOrder(iterations = 4) {
+  private computeOrder(iterations = 10) {
     type T = {id: string, initiative: number, currentInitiative: number, name: string};
     const fighters: FighterModel[] = []; 
     let startStacks: T[] = [];
@@ -634,10 +634,19 @@ export class AppComponent implements AfterViewInit {
     
     const makeIteration = (stacks: T[], iterations: number): T[] => {
       stacks = Utils.copy(stacks);
+      const waitingStacks: T[] = [];
+      const doingStacks: T[] = [];
       
       for (let i = 0, l = stacks.length; i < l; i++) {
         stacks[i].currentInitiative += stacks[i].initiative;
+        if (stacks[i].currentInitiative >= 10) {
+          doingStacks.push(stacks[i]);
+        } else {
+          waitingStacks.push(stacks[i]);
+        }
       }
+
+      stacks = doingStacks;
       
       stacks.sort((a, b) => {
         if (a.currentInitiative > b.currentInitiative) return -1;
@@ -695,7 +704,7 @@ export class AppComponent implements AfterViewInit {
         }
       }
 
-      const result = makeIteration(nextStacks, iterations - 1);
+      const result = makeIteration([...nextStacks, ...waitingStacks], iterations - 1);
       return [
         ...stacks,
         ...result,
