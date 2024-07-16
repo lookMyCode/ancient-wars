@@ -21,6 +21,7 @@
         style="border: 2px solid"
         [style.background-color]="f.armyColor | rgbToColor : 0.3"
         [style.border-color]="f.armyColor | rgbToColor"
+        (click)="computeAvailableCellsForPreview(f)"
       >
         <img *ngIf="f.img" [src]="f.img.src" alt="" class="w-100">
         <span 

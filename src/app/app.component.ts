@@ -11,19 +11,8 @@ import { Army } from './army/Army';
 import { RomanSlingersModel } from './fighters/RomanSlingersModel';
 import { RorariaModel } from './fighters/RorariaModel';
 import { Utils } from './utils/Utils';
-
-
-interface ICell {
-  top: number,
-  bottom: number,
-  left: number,
-  right: number,
-  width: number,
-  height: number,
-  mouseOver?: boolean,
-  availableForGoing?: boolean,
-  position: ICoordinate,
-}
+import { ICell } from './models/interfaces/Cell';
+import { FighterUtils } from './utils/FighterUtils';
 
 
 @Component({
@@ -162,7 +151,7 @@ export class AppComponent implements AfterViewInit {
     }),
   ];
 
-  orderOfFighters: FighterModel[] = []
+  orderOfFighters: FighterModel[] = [];
 
   constructor(
     private cdr: ChangeDetectorRef,
@@ -258,9 +247,9 @@ export class AppComponent implements AfterViewInit {
         }
 
         if (fighter) {
-          this.computeAvailableCells(fighter);
+          this.computeAvailableCellsForPreview(fighter);
         } else {
-          this.cells.forEach(c => c.availableForGoing = false);
+          this.cells.forEach(c => c.availableForGoingPreview = false);
         }
       }
     }
@@ -358,7 +347,7 @@ export class AppComponent implements AfterViewInit {
         });
       }
 
-      if (cell.availableForGoing) {
+      if (cell.availableForGoingPreview) {
         CanvasUtils.fillArea(this.ctx, {
           xMin: cell.left,
           xMax: cell.left + cell.width - 1,
@@ -438,177 +427,19 @@ export class AppComponent implements AfterViewInit {
     }
   }
 
-  private computeAvailableCells(fighter: FighterModel) {
-    type Direction = -1 | 0 | 1;
-    const distantSpeedCost = Math.sqrt(2);
-    const availableCoordinates: (ICoordinate & {availableSpeed: number})[] = [];
-    const busyPositions: ICoordinate[] = [];
-    
-    for (let k = 0, l1 = this.teams.length; k < l1; k++) {
-      for (let n = 0, l2 = this.teams[k].armies.length; n < l2; n++) {
-        for (let m = 0, l3 = this.teams[k].armies[n].fighters.length; m < l3; m++) {
-          busyPositions.push(this.teams[k].armies[n].fighters[m].position!);
-        }
-      }
-    }
-    
-    const compute = (currentPos: ICoordinate, availableSpeed: number, direction?: {x: Direction, y: Direction}) => {
-      if (currentPos.x < 0 && currentPos.x >= this.X_SIZE) return;
-      if (currentPos.y < 0 && currentPos.y >= this.Y_SIZE) return;
-      if (availableSpeed < 1) return;
-
-      for (let i = 0, l = busyPositions.length; i < l; i++) {
-        if (direction && busyPositions[i].x === currentPos.x && busyPositions[i].y === currentPos.y) return;
-      }
-
-      const availableCoordinate = availableCoordinates.find(c => c.x === currentPos.x && c.y === currentPos.y);
-      if (!availableCoordinate) {
-        availableCoordinates.push({
-          ...currentPos,
-          availableSpeed,
-        });
-      } else {
-        if (availableCoordinate.availableSpeed >= availableSpeed) return;
-        availableCoordinate.availableSpeed = availableSpeed;
-      }
-
-      if (!direction) {
-        for (let i = -1; i < 2; i++) {
-          for (let j = -1; j < 2; j++) {
-            const isNearest = i === 0 || j === 0;
-            const aSp = availableSpeed - (isNearest ? 1 : distantSpeedCost);
-            if (aSp < 1) continue;
-            !(i === 0 && j === 0) && compute(
-              {x: currentPos.x + i, y: currentPos.y + j}, 
-              aSp,
-              {x: i, y: j} as any,
-            );
-          }
-        }
-
-        return;
-      }
-
-      const computeTopLeftDirection = () => {
-        compute(
-          {x: currentPos.x - 1, y: currentPos.y - 1}, 
-          availableSpeed - distantSpeedCost,
-          {x: -1, y: -1},
-        );
-      }
-
-      const computeTopDirection = () => {
-        compute(
-          {x: currentPos.x, y: currentPos.y - 1}, 
-          availableSpeed - 1,
-          {x: 0, y: -1},
-        );
-      }
-
-      const computeTopRightDirection = () => {
-        compute(
-          {x: currentPos.x + 1, y: currentPos.y - 1}, 
-          availableSpeed - distantSpeedCost,
-          {x: 1, y: -1},
-        );
-      }
-
-      const computeRightDirection = () => {
-        compute(
-          {x: currentPos.x + 1, y: currentPos.y}, 
-          availableSpeed - 1,
-          {x: 1, y: 0},
-        );
-      }
-
-      const computeBottomRightDirection = () => {
-        compute(
-          {x: currentPos.x + 1, y: currentPos.y + 1}, 
-          availableSpeed - distantSpeedCost,
-          {x: 1, y: 1},
-        );
-      }
-
-      const computeBottomDirection = () => {
-        compute(
-          {x: currentPos.x, y: currentPos.y + 1}, 
-          availableSpeed - 1,
-          {x: 0, y: 1},
-        );
-      }
-
-      const computeBottomLeftDirection = () => {
-        compute(
-          {x: currentPos.x - 1, y: currentPos.y + 1}, 
-          availableSpeed - distantSpeedCost,
-          {x: -1, y: 1},
-        );
-      }
-
-      const computeLeftDirection = () => {
-        compute(
-          {x: currentPos.x - 1, y: currentPos.y}, 
-          availableSpeed - 1,
-          {x: -1, y: 0},
-        );
-      }
-
-      if (direction.x === 0 && direction.y === -1) {
-        computeTopLeftDirection();
-        computeTopDirection();
-        computeTopRightDirection();
-      }
-
-      if (direction.x === 1 && direction.y === -1) {
-        computeTopDirection();
-        computeTopRightDirection();
-        computeRightDirection();
-      }
-
-      if (direction.x === 1 && direction.y === 0) {
-        computeTopRightDirection();
-        computeRightDirection();
-        computeBottomRightDirection();
-      }
-
-      if (direction.x === 1 && direction.y === 1) {
-        computeRightDirection();
-        computeBottomRightDirection();
-        computeBottomDirection();
-      }
-
-      if (direction.x === 0 && direction.y === 1) {
-        computeBottomRightDirection();
-        computeBottomDirection();
-        computeBottomLeftDirection();
-      }
-
-      if (direction.x === -1 && direction.y === 1) {
-        computeBottomDirection();
-        computeBottomLeftDirection();
-        computeLeftDirection();
-      }
-
-      if (direction.x === -1 && direction.y === 0) {
-        computeBottomLeftDirection();
-        computeLeftDirection();
-        computeTopLeftDirection();
-      }
-
-      if (direction.x === -1 && direction.y === -1) {
-        computeLeftDirection();
-        computeTopLeftDirection();
-        computeTopDirection();
-      }
-    }
-    
-    compute(fighter.position!, fighter.speed + 1);
+  computeAvailableCellsForPreview(fighter: FighterModel) {
+    const availableCoordinates: (ICoordinate & {availableSpeed: number})[] = FighterUtils.getAvailableCells({
+      fighter,
+      teams: this.teams,
+      X_SIZE: this.X_SIZE,
+      Y_SIZE: this.Y_SIZE,
+    });
     
     for (let i = 0, l = availableCoordinates.length; i < l; i++) {
       const cell = this.cells.find(c => c.position.x === availableCoordinates[i].x && c.position.y === availableCoordinates[i].y);
       if (!cell) continue;
 
-      cell.availableForGoing = true;
+      cell.availableForGoingPreview = true;
     }
   }
 
